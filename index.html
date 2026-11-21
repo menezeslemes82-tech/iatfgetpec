@@ -167,6 +167,10 @@ const Store={
  delEv(id){
   if(LOCAL){S.eventos=S.eventos.filter(x=>x.id!==id);lsSet('gp_eventos',S.eventos);onData();return}
   db.collection('eventos').doc(id).delete().catch(er=>toast('Erro ao excluir: '+er.code,'e'))},
+ async bulk(l,evs){
+  if(LOCAL){S.lotes=S.lotes.filter(x=>x.id!==l.id).concat([l]);S.eventos=S.eventos.filter(e=>e.loteId!==l.id).concat(evs);lsSet('gp_lotes',S.lotes);lsSet('gp_eventos',S.eventos);onData();return}
+  const ops=[[db.collection('lotes').doc(l.id),l],...evs.map(e=>[db.collection('eventos').doc(e.id),e])];
+  for(let i=0;i<ops.length;i+=400){const b=db.batch();ops.slice(i,i+400).forEach(([r,d])=>b.set(r,d));await b.commit()}},
  delLote(id){const ids=S.eventos.filter(e=>e.loteId===id).map(e=>e.id);
   if(LOCAL){S.lotes=S.lotes.filter(l=>l.id!==id);S.eventos=S.eventos.filter(e=>e.loteId!==id);lsSet('gp_lotes',S.lotes);lsSet('gp_eventos',S.eventos);onData();return}
   for(let i=0;i<ids.length;i+=400){const b=db.batch();ids.slice(i,i+400).forEach(x=>b.delete(db.collection('eventos').doc(x)));b.commit()}
@@ -220,7 +224,7 @@ function calc(lote,evs,ciclo){
  const aval=pIA+pT+vz;
  const fin=rows.filter(r=>r.gf),finP=fin.filter(r=>r.status!=='vazia').length;
  const prenhezIA=pct(rows.filter(r=>r.insem&&r.status==='prenhe_ia').length,insem);
- const prenhezFinal=pct(finP,fin.length);
+ const prenhezFinal=pct(pIA+pT,aval);
  const faltas={};let faltTot=0;
  ETAPAS.forEach(et=>{
   let esp=0,reg=0,falt=0,ids=[],temIds=false;
@@ -273,7 +277,9 @@ function viewLogin(){
 const msgAuth=e=>({'auth/invalid-credential':'E-mail ou senha incorretos.','auth/user-not-found':'Usuário não encontrado.','auth/wrong-password':'Senha incorreta.','auth/email-already-in-use':'E-mail já cadastrado.','auth/weak-password':'Senha muito curta (mín. 6).'}[e.code]||('Erro: '+e.code));
 function viewConta(){
  shell('Conta',`<div class="card"><h3>Usuário</h3><p>${esc(S.user.email)}</p><p class="note">Versão ${LOCAL?'local (sem Firebase)':'online com sincronização offline'} • GestPec by AIMEX SOFTWARE AGRO</p>
- <div class="row"><button class="btn ghost" data-act="backup">⬇ Backup (JSON)</button>${LOCAL?'':'<button class="btn red" data-act="logout">Sair</button>'}</div></div>`,'conta');
+ <div class="row"><button class="btn ghost" data-act="backup">⬇ Backup (JSON)</button></div></div>
+ <div class="card"><h3>Demonstração</h3><p class="note" style="margin-top:0">Cria o lote “DEMO-500” com 500 animais fictícios, 2 ciclos (com ressincronização), 4 touros, 3 categorias, faltas e todos os manejos preenchidos.</p><div class="row"><button class="btn g" data-act="demo">Carregar demo (500 animais)</button><button class="btn ghost" data-act="delDemo">Remover demo</button></div></div>
+ <div class="card"><div class="row">${LOCAL?'':'<button class="btn red" data-act="logout">Sair</button>'}</div></div>`,'conta');
 }
 
 /* ====== HOME ====== */
@@ -411,7 +417,7 @@ function kpiHTML(c,l){
  return `<div class="card"><div class="sec">3. Indicadores do lote${S.ciclo==='todos'?' (todos os ciclos)':' – ciclo '+S.ciclo}</div><div class="kpis">
  ${k(c.insem,'Qtd. inseminada')}${k(c.pIA,'Qtd. prenhe IA')}${k(c.pT,'Qtd. prenhe touro')}${k(c.vz,'Qtd. vazia')}${k(c.aptos,'Aptos à ressincronização')}${k(c.aval,'Total avaliado')}
  ${k(fmtPct(c.prenhezIA),'Prenhez lote IA',1)}${k(fmtPct(c.prenhezFinal),'Prenhez final',1)}${k(c.faltTot,'Faltas por manejo')}</div>
- <div class="note">Prenhez IA = prenhe IA ÷ inseminadas. Prenhez final = (prenhe IA + touro) ÷ animais com DG final (${c.nFin}). ${c.prov?c.prov+' animal(is) ainda só com DG 30 (provisório).':''}</div></div>
+ <div class="note">Prenhez IA = prenhe IA ÷ inseminadas. Prenhez final = (prenhe IA + touro) ÷ total avaliado. ${c.prov?c.prov+' animal(is) ainda só com DG 30 (provisório).':''}</div></div>
  <div class="card"><h3>Faltas por manejo</h3>${tb(['Manejo','Esperado','Registrado','Faltas'],ETAPAS.filter(e=>c.faltas[e.k].esp>0||c.faltas[e.k].reg>0).map(e=>{const f=c.faltas[e.k];return `<tr><td>${e.curto}${f.ids&&f.ids.length&&f.ids.length<=25?`<br><small style="color:var(--mut)">${esc(f.ids.join(', '))}</small>`:''}</td><td class="n">${f.esp}</td><td class="n">${f.reg}</td><td class="n">${f.falt?`<span class="chip r">${f.falt}</span>`:'0'}</td></tr>`}))}</div>
  <div class="card"><h3>Resultado por categoria</h3>${tb(['Categoria','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],c.porCat.map(gr))}</div>
  <div class="card"><h3>Resultado por touro</h3>${tb(['Touro','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],c.porTouro.map(gr))}</div>
@@ -495,6 +501,54 @@ function pdfGeral(){
  rodape(doc);doc.save('GestPec_IATF_Geral.pdf');
 }
 
+
+/* ====== DADOS DE DEMONSTRAÇÃO (500 animais) ====== */
+function gerarDemo(){
+ let sd=20261121;const R=()=>{sd|=0;sd=sd+0x6D2B79F5|0;let t=Math.imul(sd^sd>>>15,1|sd);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+ const pick=a=>a[Math.floor(R()*a.length)],rr=(a,b)=>a+R()*(b-a),r1=v=>Math.round(v*10)/10,ecc=()=>Math.round(rr(2.5,3.75)*4)/4;
+ const addD=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())};
+ const L={id:'demo-500',fazenda:'Fazenda Boa Esperança (DEMO)',retiro:'Retiro Sede',vet:'Dr. Michel',lote:'DEMO-500',categoria:'Mista',qtd:'500',pastoOrigem:'Pasto 12',pastoDestino:'Pasto Maternidade',repasse:'sim',obs:'Lote de demonstração com dados fictícios.',cicloAtual:2,criadoEm:Date.now(),demo:true};
+ const evs=[],t0=Date.now();let seq=0;
+ const add=(etapa,ciclo,a,data,extra)=>{const mi=Math.floor(R()*150);const o={id:[L.id,ciclo,etapa,a.id].join('_'),loteId:L.id,etapa,ciclo,animalId:a.id,data,horaIni:'07:00',horaFim:'10:30',...extra,criadoEm:t0+(seq++),autor:(S.user&&S.user.email)||''};
+  Object.keys(o).forEach(k=>{if(o[k]===undefined||o[k]===''||o[k]===null)delete o[k]});evs.push(o)};
+ const OBS=['Animal agitado','Cio antes do protocolo','Manqueira leve','Cria ao pé','Úbere inchado','Corrimento leve'];
+ const ob=()=>R()<.04?{obs:pick(OBS)}:{};
+ const T=[['Rastro FIV',.60,'P-2231'],['Taj Mahal',.53,'P-1874'],['Dinamite TE',.47,'P-3090'],['Gigante TE',.42,'P-2655']];
+ const adj={Novilha:.04,Primípara:-.03,Multípara:.0};
+ const D0=['2026-08-10','2026-09-19'];
+ const A=[];for(let i=0;i<500;i++){const cat=i<120?'Novilha':i<280?'Primípara':'Multípara';
+  const peso=cat==='Novilha'?rr(290,350):cat==='Primípara'?rr(380,430):rr(410,490);
+  A.push({id:String(1001+i),cat,raca:pick(['Nelore','Nelore','Nelore PO','Cruzada Angus']),peso,ecc:ecc()})}
+ const aptos=[];
+ A.forEach(a=>{
+  if(a.cat==='Novilha'&&R()<.98)add('puberdade',1,a,addD(D0[0],-35),{categoria:a.cat,peso:r1(a.peso-18),ecc:ecc(),protocolo:'Implante + PGF'});
+  if(R()<.988){ // D0
+   add('d0',1,a,D0[0],{categoria:a.cat,raca:a.raca,peso:r1(a.peso),ecc:a.ecc,implante:pick(['Implante 1º uso','Implante 1º uso','Implante 2º uso'])});
+   if(R()<.98)add('d8',1,a,addD(D0[0],8),{sincronizacao:'PGF + eCG + CE',quedaImplante:R()<.03?'sim':'nao',...ob()});
+   if(R()<.985){ // IA
+    const t=pick(T),cio=R()<.15?'1':R()<.55?'2':'3';
+    add('iatf',1,a,addD(D0[0],10),{touro:t[0],partida:t[2],escoreCio:cio,...ob()});
+    if(R()<.99){ // DG30
+     const p=t[1]+adj[a.cat]+(cio==='3'?.05:cio==='1'?-.08:0)+(a.ecc>=3.25?.03:-.02);
+     const pren=R()<p,pw=r1(a.peso+rr(8,25)),eg=ecc();
+     if(pren){add('dg30',1,a,addD(D0[0],40),{resultado:'prenhe',ressinc:'nao',peso:pw,ecc:eg,...ob()});
+      add('dgfinal',1,a,addD(D0[0],70),{resultado:R()<.96?'prenhe_ia':'vazia',peso:r1(pw+rr(5,18)),ecc:ecc(),anca:String(Math.floor(rr(100,999)))})}
+     else{const rs=R()<.94;add('dg30',1,a,addD(D0[0],40),{resultado:'vazia',ressinc:rs?'sim':'nao',peso:pw,ecc:eg,...ob()});
+      if(rs)aptos.push({a,peso:pw});
+      else add('dgfinal',1,a,addD(D0[0],70),{resultado:R()<.6?'prenhe_touro':'vazia',peso:r1(pw+rr(5,18)),ecc:ecc(),anca:String(Math.floor(rr(100,999)))})}
+    }}}});
+ // ciclo 2 (ressincronização)
+ aptos.forEach(({a,peso})=>{
+  if(R()<.97){add('d0',2,a,D0[1],{categoria:a.cat,raca:a.raca,peso:r1(peso),ecc:ecc(),implante:'Implante 2º uso'});
+   if(R()<.98)add('d8',2,a,addD(D0[1],8),{sincronizacao:'PGF + eCG + CE',quedaImplante:R()<.04?'sim':'nao'});
+   if(R()<.985){const t=pick(T),cio=R()<.2?'1':R()<.55?'2':'3';
+    add('iatf',2,a,addD(D0[1],10),{touro:t[0],partida:t[2],escoreCio:cio});
+    if(R()<.97){const p=t[1]-.06+(cio==='3'?.05:cio==='1'?-.08:0);
+     if(R()<p)add('dg30',2,a,addD(D0[1],40),{resultado:'prenhe',ressinc:'nao',peso:r1(peso+rr(5,20)),ecc:ecc()});
+     else add('dg30',2,a,addD(D0[1],40),{resultado:'vazia',ressinc:R()<.72?'sim':'nao',peso:r1(peso+rr(5,20)),ecc:ecc()})}}}});
+ return{lote:L,eventos:evs};
+}
+
 /* ====== AÇÕES (delegação de eventos) ====== */
 const ACT={
  tab(t){S.tab=t.dataset.k;S.editId=null;buildEtapa();refreshLote()},
@@ -513,6 +567,9 @@ const ACT={
  pdfGeral(){try{pdfGeral()}catch(e){toast('Erro ao gerar PDF: '+e.message,'e')}},
  csv(){closeModal();const l=loteAtual();baixar(`GestPec_IATF_${slug(l.fazenda)}_Lote_${slug(l.lote)}.csv`,csvLote(l),'text/csv;charset=utf-8')},
  delLote(){const l=loteAtual();closeModal();if(confirm(`Excluir o lote ${l.lote} e TODOS os registros dele? Não dá para desfazer.`)){Store.delLote(l.id);S.loteId=null;location.hash='#/';toast('Lote excluído')}},
+ async demo(){if(!confirm('Carregar o lote de demonstração com 500 animais (dados fictícios)? Você pode removê-lo depois.'))return;
+  toast('Gerando dados…');const d=gerarDemo();try{await Store.bulk(d.lote,d.eventos);S.loteId=null;toast('✓ Demonstração carregada ('+d.eventos.length+' registros)');location.hash='#/lote/demo-500'}catch(e){toast('Erro: '+(e.code||e.message),'e')}},
+ delDemo(){if(!S.lotes.some(l=>l.id==='demo-500'))return toast('Não há demonstração carregada');if(confirm('Remover o lote de demonstração e todos os registros dele?')){Store.delLote('demo-500');toast('Demonstração removida')}},
  backup(){baixar('gestpec_backup.json',JSON.stringify({lotes:S.lotes,eventos:S.eventos},null,1),'application/json')},
  logout(){auth.signOut()},
  async signup(){const e=$('#le').value.trim(),p=$('#lp').value;if(!e||p.length<6)return toast('Informe e-mail e senha (mín. 6)','e');try{await auth.createUserWithEmailAndPassword(e,p)}catch(er){toast(msgAuth(er),'e')}},
