@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14307a">
+<title>GestPec – Coleta de dados de IATF</title>
+<!--
+  REGRAS DO FIRESTORE (Firebase > Firestore > Regras):
+
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /{document=**} {
+        allow read, write: if request.auth != null
+          && request.auth.token.email in ['menezesapptec@gmail.com','agrosafra7@gmail.com'];
+      }
+    }
+  }
+-->
+<style>
+:root{--navy:#14307a;--navy2:#0e2358;--green:#5aa51e;--green2:#3f7f12;--lg:#eaf5dc;--bg:#f3f6fa;--card:#fff;--tx:#18233d;--mut:#6a7690;--bd:#dde3ee;--red:#c0392b;--amb:#d9822b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--navy);text-decoration:none}
+#app{min-height:100vh;padding-bottom:78px}
+.hdr{position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;display:flex;align-items:center;gap:10px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top))}
+.hdr img{height:34px;background:#fff;border-radius:6px;padding:2px}
+.hdr h1{font-size:16px;margin:0;flex:1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrap{max-width:980px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:15px;color:var(--navy)}
+.sec{background:linear-gradient(90deg,var(--navy),var(--navy2));color:#fff;border-radius:10px;padding:8px 12px;font-weight:700;margin:4px 0 10px;border-right:10px solid var(--green)}
+.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:600;background:var(--navy);color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.btn.g{background:var(--green)}.btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--bd)}.btn.red{background:var(--red)}.btn.sm{padding:6px 10px;font-size:13px}
+.btn:disabled{opacity:.5}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.grow{flex:1;min-width:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.fld{display:flex;flex-direction:column;gap:3px}.fld>span{font-size:12px;color:var(--mut);font-weight:600}.fld.full{grid-column:1/-1}
+input[type=text],input[type=email],input[type=password],input[type=date],input[type=time],input[type=search],select,textarea{width:100%;border:1px solid var(--bd);border-radius:10px;padding:10px;background:#fff;min-height:42px}
+textarea{min-height:60px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--green);border-color:var(--green)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}.seg label{flex:1;min-width:70px}.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg b{display:block;text-align:center;padding:11px 8px;border:1px solid var(--bd);border-radius:10px;background:#fff;font-weight:600;cursor:pointer}
+.seg input:checked+b{background:var(--green);border-color:var(--green2);color:#fff}
+.seg input:disabled+b{opacity:.45}
+.chip{display:inline-block;background:var(--lg);color:var(--green2);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700}
+.chip.n{background:#e5ebf8;color:var(--navy)}.chip.r{background:#fbe5e2;color:var(--red)}.chip.a{background:#fdeedd;color:var(--amb)}
+.lote{display:block;color:inherit}.lote h3{margin:0 0 2px}.lote small{color:var(--mut)}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;border:1px solid var(--bd);background:#fff;border-radius:10px;padding:8px 11px;font-weight:600;font-size:13px;cursor:pointer;color:var(--navy)}
+.tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}.tab.on.gr{background:var(--green);border-color:var(--green)}
+.tab i{font-style:normal;font-size:11px;background:rgba(0,0,0,.12);border-radius:8px;padding:0 6px;margin-left:4px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px}
+.kpi{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:10px}.kpi b{display:block;font-size:24px;color:var(--navy)}.kpi span{font-size:12px;color:var(--mut)}
+.kpi.p b{color:var(--green2)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 6px;border-bottom:1px solid var(--bd);text-align:left}th{color:var(--mut);font-size:12px}td.n,th.n{text-align:right}
+.tw{overflow-x:auto}
+.reg{display:flex;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd)}.reg:last-child{border:0}
+.reg .t{flex:1;min-width:0;cursor:pointer}.reg b{font-size:15px}.reg small{display:block;color:var(--mut);overflow:hidden;text-overflow:ellipsis}
+.nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--bd);display:flex;z-index:25;padding-bottom:env(safe-area-inset-bottom)}
+.nav a{flex:1;text-align:center;padding:9px 4px;font-size:12px;color:var(--mut);font-weight:600}.nav a.on{color:var(--navy)}.nav a span{display:block;font-size:20px}
+#toast{position:fixed;left:12px;right:12px;bottom:90px;z-index:60;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#toast div{background:#18233d;color:#fff;padding:10px 14px;border-radius:10px;max-width:520px;box-shadow:0 4px 14px rgba(0,0,0,.25)}#toast .w{background:var(--amb)}#toast .e{background:var(--red)}
+.modal{position:fixed;inset:0;background:rgba(10,20,50,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center}.modal.hidden{display:none}
+.modal>div{background:#fff;width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px}
+@media(min-width:700px){.modal{align-items:center}.modal>div{border-radius:16px}}
+.note{background:var(--lg);border-radius:10px;padding:8px 10px;font-size:12.5px;color:#2d5410;margin-top:10px}
+.warn{background:#fdeedd;color:#8a4b0f}
+.banner{background:#fff4d6;color:#7a5a00;padding:6px 12px;font-size:12.5px;text-align:center}
+.pill{display:inline-block;border:1px solid var(--bd);background:#fff;border-radius:8px;padding:5px 9px;margin:3px 3px 0 0;font-weight:600;font-size:13px;cursor:pointer}
+details summary{cursor:pointer;font-weight:600;color:var(--navy)}
+.login{max-width:380px;margin:8vh auto;text-align:center}.login img{width:160px}
+.empty{color:var(--mut);text-align:center;padding:18px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<div id="modal" class="modal hidden"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+'use strict';
+/* ====== CONFIGURAÇÃO ====== */
+const FIREBASE_CONFIG={apiKey:"COLE_AQUI",authDomain:"",projectId:"",storageBucket:"",messagingSenderId:"",appId:""};
+const LOGO="data:image/png;base64,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";
+const LOCAL=!FIREBASE_CONFIG.apiKey||FIREBASE_CONFIG.apiKey.startsWith('COLE')||typeof firebase==='undefined';
+
+/* ====== UTIL ====== */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+const p2=n=>String(n).padStart(2,'0');
+const hoje=()=>{const d=new Date();return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())};
+const agora=()=>{const d=new Date();return p2(d.getHours())+':'+p2(d.getMinutes())};
+const fmtData=s=>s?s.split('-').reverse().join('/'):'';
+const num=v=>{if(v===''||v==null)return null;const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?null:n};
+const pct=(a,b)=>b>0?a/b*100:null;
+const fmtPct=v=>v==null?'—':v.toFixed(1).replace('.',',')+'%';
+const clean=o=>JSON.parse(JSON.stringify(o));
+const range=(a,b)=>{const r=[];for(let i=a;i<=b;i++)r.push(i);return r};
+const uniq=a=>[...new Set(a.filter(Boolean))].sort((x,y)=>x.localeCompare(y,'pt-BR'));
+const lsGet=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
+const lsSet=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+function toast(m,t=''){const d=document.createElement('div');d.textContent=m;if(t)d.className=t;$('#toast').appendChild(d);setTimeout(()=>d.remove(),t?4500:2600)}
+function modal(html){const m=$('#modal');m.innerHTML='<div>'+html+'</div>';m.classList.remove('hidden')}
+function closeModal(){$('#modal').classList.add('hidden');$('#modal').innerHTML=''}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+
+/* ====== MODELO ====== */
+const CATS=['Novilha','Primípara','Multípara','Vaca solteira','Vaca parida','Mista'];
+const ETAPAS=[
+ {k:'puberdade',nome:'Indução de Puberdade em Novilhas',curto:'Puberdade',campos:[
+  {n:'categoria',l:'Categoria',t:'sel',o:CATS,keep:1},{n:'peso',l:'Peso (kg)',t:'num'},{n:'ecc',l:'ECC (1 a 5)',t:'num'},
+  {n:'protocolo',l:'Aplicação / protocolo',t:'text',keep:1},{n:'obs',l:'Observações',t:'area'}]},
+ {k:'d0',nome:'D0 – Início do Protocolo',curto:'D0',campos:[
+  {n:'categoria',l:'Categoria',t:'sel',o:CATS,keep:1},{n:'raca',l:'Raça',t:'text',keep:1},{n:'peso',l:'Peso (kg)',t:'num'},
+  {n:'ecc',l:'ECC (1 a 5)',t:'num'},{n:'implante',l:'Implante',t:'text',keep:1}]},
+ {k:'d8',nome:'D8/D9 – Retirada / Sincronização',curto:'D8/D9',campos:[
+  {n:'sincronizacao',l:'Sincronização',t:'text',keep:1},
+  {n:'quedaImplante',l:'Queda de implante',t:'seg',o:[['nao','Não'],['sim','Sim']]},{n:'obs',l:'Observações',t:'area'}]},
+ {k:'iatf',nome:'Inseminação',curto:'Inseminação',campos:[
+  {n:'touro',l:'Touro',t:'text',keep:1},{n:'partida',l:'Partida do sêmen',t:'text',keep:1},
+  {n:'escoreCio',l:'Escore de cio',t:'sel',o:['1','2','3']},{n:'obs',l:'Observações',t:'area'}]},
+ {k:'dg30',nome:'DG 30 Dias',curto:'DG 30',campos:[
+  {n:'resultado',l:'Diagnóstico IA',t:'seg',req:1,o:[['prenhe','Prenhe'],['vazia','Vazia']]},
+  {n:'ressinc',l:'Vai para ressincronização?',t:'seg',o:[['sim','Sim'],['nao','Não']]},
+  {n:'peso',l:'Peso (kg)',t:'num'},{n:'ecc',l:'ECC (1 a 5)',t:'num'},{n:'obs',l:'Observações',t:'area'}],
+  nota:'Regra: vacas ou novilhas prenhes não seguem para ressincronização. Vazias, sem problema reprodutivo, seguem. Para vazia com problema reprodutivo, marque "Não".'},
+ {k:'dgfinal',nome:'DG Final',curto:'DG Final',campos:[
+  {n:'resultado',l:'Resultado',t:'seg',req:1,o:[['prenhe_ia','Prenhe IA'],['prenhe_touro','Prenhe touro'],['vazia','Vazia']]},
+  {n:'peso',l:'Peso (kg)',t:'num'},{n:'ecc',l:'ECC (1 a 5)',t:'num'},{n:'anca',l:'Nº anca',t:'text'},{n:'obs',l:'Observações',t:'area'}]}
+];
+const ET=k=>ETAPAS.find(e=>e.k===k);
+const STATUS={prenhe_ia:'Prenhe IA',prenhe_touro:'Prenhe touro',vazia:'Vazia',sem_dg:'Sem DG'};
+const VAL={prenhe:'Prenhe',vazia:'Vazia',prenhe_ia:'Prenhe IA',prenhe_touro:'Prenhe touro',sim:'Sim',nao:'Não'};
+
+/* ====== ESTADO / STORE ====== */
+const S={user:null,lotes:[],eventos:[],ready:false,tab:'d0',ciclo:1,loteId:null,editId:null,busca:'',keep:lsGet('gp_keep',{})};
+let db=null,auth=null,unsubs=[],_evm=null;
+const Store={
+ init(){
+  if(LOCAL){S.lotes=lsGet('gp_lotes',[]);S.eventos=lsGet('gp_eventos',[]);S.user={email:'modo-local',local:true};S.ready=true;route();return}
+  firebase.initializeApp(FIREBASE_CONFIG);auth=firebase.auth();db=firebase.firestore();
+  db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+  auth.onAuthStateChanged(u=>{
+   unsubs.forEach(f=>f());unsubs=[];S.ready=false;
+   if(!u){S.user=null;S.lotes=[];S.eventos=[];route();return}
+   S.user=u;let got=0;const ok=()=>{if(++got>=2){S.ready=true}onData()};
+   unsubs.push(db.collection('lotes').onSnapshot(s=>{S.lotes=s.docs.map(d=>({...d.data(),id:d.id}));ok()},er=>toast('Sem permissão/erro em lotes: '+er.code,'e')));
+   unsubs.push(db.collection('eventos').onSnapshot(s=>{S.eventos=s.docs.map(d=>({...d.data(),id:d.id}));ok()},er=>toast('Sem permissão/erro em registros: '+er.code,'e')));
+   route();
+  });
+ },
+ saveLote(l){l=clean(l);
+  if(LOCAL){const i=S.lotes.findIndex(x=>x.id===l.id);i<0?S.lotes.push(l):S.lotes[i]=l;lsSet('gp_lotes',S.lotes);onData();return}
+  db.collection('lotes').doc(l.id).set(l,{merge:true}).catch(e=>toast('Erro ao salvar: '+e.code,'e'))},
+ saveEv(e){e=clean(e);
+  if(LOCAL){const i=S.eventos.findIndex(x=>x.id===e.id);i<0?S.eventos.push(e):S.eventos[i]=e;lsSet('gp_eventos',S.eventos);onData();return}
+  db.collection('eventos').doc(e.id).set(e).catch(er=>toast('Erro ao salvar: '+er.code,'e'))},
+ delEv(id){
+  if(LOCAL){S.eventos=S.eventos.filter(x=>x.id!==id);lsSet('gp_eventos',S.eventos);onData();return}
+  db.collection('eventos').doc(id).delete().catch(er=>toast('Erro ao excluir: '+er.code,'e'))},
+ delLote(id){const ids=S.eventos.filter(e=>e.loteId===id).map(e=>e.id);
+  if(LOCAL){S.lotes=S.lotes.filter(l=>l.id!==id);S.eventos=S.eventos.filter(e=>e.loteId!==id);lsSet('gp_lotes',S.lotes);lsSet('gp_eventos',S.eventos);onData();return}
+  for(let i=0;i<ids.length;i+=400){const b=db.batch();ids.slice(i,i+400).forEach(x=>b.delete(db.collection('eventos').doc(x)));b.commit()}
+  db.collection('lotes').doc(id).delete()}
+};
+function onData(){_evm=null;if(!S.user)return;refresh()}
+function evsLote(id){if(!_evm){_evm=new Map();for(const e of S.eventos){if(!_evm.has(e.loteId))_evm.set(e.loteId,[]);_evm.get(e.loteId).push(e)}}return _evm.get(id)||[]}
+const loteAtual=()=>S.lotes.find(l=>l.id===S.loteId);
+
+/* ====== CÁLCULOS ====== */
+function aptosDe(evs,c){
+ const s=new Set();
+ evs.forEach(e=>{if(e.etapa==='dg30'&&e.ciclo===c&&e.resultado==='vazia'&&e.ressinc==='sim')s.add(e.animalId)});
+ return s}
+function esperado(lote,evs,et,c){
+ const ids=(x,cc)=>new Set(evs.filter(e=>e.etapa===x&&e.ciclo===cc).map(e=>e.animalId));
+ switch(et){
+  case 'puberdade':return{ids:null,n:c===1?(parseInt(lote.qtd)||0):0};
+  case 'd0':return c===1?{ids:null,n:parseInt(lote.qtd)||0}:{ids:aptosDe(evs,c-1)};
+  case 'd8':return{ids:ids('d0',c)};
+  case 'iatf':{const d=ids('d0',c);return{ids:d.size?d:ids('d8',c)}}
+  default:return{ids:ids('iatf',c)};
+ }}
+function faltasEtapa(lote,evs,et,c){
+ const reg=new Set(evs.filter(e=>e.etapa===et&&e.ciclo===c).map(e=>e.animalId));
+ const ex=esperado(lote,evs,et,c);
+ if(ex.ids){const miss=[...ex.ids].filter(i=>!reg.has(i));return{esp:ex.ids.size,reg:reg.size,falt:miss.length,ids:miss}}
+ return{esp:ex.n,reg:reg.size,falt:Math.max(0,ex.n-reg.size),ids:null}}
+function calc(lote,evs,ciclo){
+ const cmax=Math.max(lote.cicloAtual||1,...evs.map(e=>e.ciclo||1));
+ const E=ciclo==='todos'?evs:evs.filter(e=>e.ciclo===ciclo);
+ const A=new Map();
+ E.forEach(e=>{let a=A.get(e.animalId);if(!a){a={id:e.animalId,ev:{}};A.set(e.animalId,a)}(a.ev[e.etapa]=a.ev[e.etapa]||[]).push(e)});
+ const last=(a,k)=>{const l=a.ev[k];return l?l.slice().sort((x,y)=>x.ciclo-y.ciclo).pop():null};
+ const cs=ciclo==='todos'?range(1,cmax):[ciclo];
+ const aptosSet=new Set();
+ cs.forEach(c=>aptosDe(evs,c).forEach(id=>{if(!evs.some(e=>e.animalId===id&&e.etapa==='iatf'&&e.ciclo>c))aptosSet.add(id)}));
+ const rows=[];
+ A.forEach(a=>{
+  const d0=last(a,'d0'),pb=last(a,'puberdade'),ia=last(a,'iatf'),g30x=last(a,'dg30'),gfx=last(a,'dgfinal');
+  let g30=g30x,gf=gfx;
+  if(ia&&g30&&g30.ciclo<ia.ciclo)g30=null;
+  if(ia&&gf&&gf.ciclo<ia.ciclo)gf=null;
+  let status='sem_dg',prov=false;
+  if(gf)status=gf.resultado;else if(g30){status=g30.resultado==='prenhe'?'prenhe_ia':'vazia';prov=true}
+  rows.push({id:a.id,categoria:(d0&&d0.categoria)||(pb&&pb.categoria)||lote.categoria||'—',touro:ia?(ia.touro||'—'):'—',
+   insem:!!ia,status,prov,apto:aptosSet.has(a.id),g30,gf,ia,d0,ciclo:ciclo==='todos'?null:ciclo})});
+ rows.sort((x,y)=>x.id.localeCompare(y.id,'pt-BR',{numeric:true}));
+ const cnt=s=>rows.filter(r=>r.status===s).length;
+ const insem=rows.filter(r=>r.insem).length,pIA=cnt('prenhe_ia'),pT=cnt('prenhe_touro'),vz=cnt('vazia');
+ const aval=pIA+pT+vz;
+ const fin=rows.filter(r=>r.gf),finP=fin.filter(r=>r.status!=='vazia').length;
+ const prenhezIA=pct(rows.filter(r=>r.insem&&r.status==='prenhe_ia').length,insem);
+ const prenhezFinal=pct(finP,fin.length);
+ const faltas={};let faltTot=0;
+ ETAPAS.forEach(et=>{
+  let esp=0,reg=0,falt=0,ids=[],temIds=false;
+  cs.forEach(c=>{const f=faltasEtapa(lote,evs,et.k,c);esp+=f.esp;reg+=f.reg;falt+=f.falt;if(f.ids){temIds=true;ids=ids.concat(f.ids)}});
+  if(et.k==='puberdade'&&reg===0)esp=0,falt=0;
+  faltas[et.k]={esp,reg,falt,ids:temIds?ids:null};faltTot+=falt});
+ const grupo=(fn)=>{const m={};rows.filter(r=>r.insem).forEach(r=>{const k=fn(r);const g=m[k]=m[k]||{k,insem:0,pIA:0,pT:0,vz:0};g.insem++;if(r.status==='prenhe_ia')g.pIA++;else if(r.status==='prenhe_touro')g.pT++;else if(r.status==='vazia')g.vz++});return Object.values(m).sort((a,b)=>a.k.localeCompare(b.k,'pt-BR'))};
+ return{rows,insem,pIA,pT,vz,aval,aptos:aptosSet.size,prenhezIA,prenhezFinal,nFin:fin.length,prov:rows.filter(r=>r.prov).length,faltas,faltTot,
+  porCat:grupo(r=>r.categoria),porTouro:grupo(r=>r.touro)}}
+function mergeGrupos(arrs){const m={};arrs.flat().forEach(g=>{const x=m[g.k]=m[g.k]||{k:g.k,insem:0,pIA:0,pT:0,vz:0};x.insem+=g.insem;x.pIA+=g.pIA;x.pT+=g.pT;x.vz+=g.vz});return Object.values(m).sort((a,b)=>a.k.localeCompare(b.k,'pt-BR'))}
+
+/* ====== ROTEAMENTO ====== */
+window.addEventListener('hashchange',route);
+function route(){
+ if(!S.user){return viewLogin()}
+ const h=location.hash.replace(/^#\/?/,'').split('/');
+ if(!h[0]){S.loteId=null;return viewHome()}
+ if(h[0]==='novo')return viewLoteForm(null);
+ if(h[0]==='lote'){
+  const l=S.lotes.find(x=>x.id===h[1]);
+  if(!l){if(!S.ready&&!LOCAL){return shell('Carregando…','<div class="empty">Carregando dados…</div>','')}location.hash='#/';return}
+  if(h[2]==='editar')return viewLoteForm(l);
+  if(S.loteId!==l.id){S.loteId=l.id;S.ciclo=l.cicloAtual||1;S.tab=S.tab||'d0';S.editId=null}
+  return viewLote();
+ }
+ if(h[0]==='ind')return viewInd();
+ if(h[0]==='conta')return viewConta();
+ location.hash='#/';
+}
+function refresh(){
+ const h=location.hash.replace(/^#\/?/,'').split('/')[0];
+ if(h==='lote'&&$('#etapaBox')&&!location.hash.endsWith('editar'))return refreshLote();
+ if(h===''||h==='ind')return route();
+}
+function shell(titulo,corpo,nav,acoes=''){
+ $('#app').innerHTML=`${LOCAL&&S.user?'<div class="banner">Modo local de teste – dados salvos só neste aparelho. Configure o Firebase para sincronizar.</div>':''}
+ <div class="hdr"><img src="${LOGO}" alt="GestPec"><h1>${titulo}</h1>${acoes}</div>
+ <div class="wrap">${corpo}</div>
+ <nav class="nav"><a href="#/" class="${nav==='lotes'?'on':''}"><span>🐄</span>Lotes</a><a href="#/ind" class="${nav==='ind'?'on':''}"><span>📊</span>Indicadores</a><a href="#/conta" class="${nav==='conta'?'on':''}"><span>⚙️</span>Conta</a></nav>`;
+ window.scrollTo(0,0);
+}
+
+/* ====== LOGIN / CONTA ====== */
+function viewLogin(){
+ $('#app').innerHTML=`<div class="login card"><img src="${LOGO}" alt="GestPec"><h3 style="margin-top:6px">Coleta de dados de IATF</h3>
+ <form id="fl" class="grid" style="grid-template-columns:1fr"><input type="email" id="le" placeholder="E-mail" autocomplete="username" required><input type="password" id="lp" placeholder="Senha" autocomplete="current-password" required minlength="6">
+ <button class="btn g">Entrar</button><button type="button" class="btn ghost" data-act="signup">Criar conta</button><button type="button" class="btn ghost sm" data-act="reset">Esqueci a senha</button></form></div>`;
+ $('#fl').onsubmit=async e=>{e.preventDefault();try{await auth.signInWithEmailAndPassword($('#le').value.trim(),$('#lp').value)}catch(er){toast(msgAuth(er),'e')}};
+}
+const msgAuth=e=>({'auth/invalid-credential':'E-mail ou senha incorretos.','auth/user-not-found':'Usuário não encontrado.','auth/wrong-password':'Senha incorreta.','auth/email-already-in-use':'E-mail já cadastrado.','auth/weak-password':'Senha muito curta (mín. 6).'}[e.code]||('Erro: '+e.code));
+function viewConta(){
+ shell('Conta',`<div class="card"><h3>Usuário</h3><p>${esc(S.user.email)}</p><p class="note">Versão ${LOCAL?'local (sem Firebase)':'online com sincronização offline'} • GestPec by AIMEX SOFTWARE AGRO</p>
+ <div class="row"><button class="btn ghost" data-act="backup">⬇ Backup (JSON)</button>${LOCAL?'':'<button class="btn red" data-act="logout">Sair</button>'}</div></div>`,'conta');
+}
+
+/* ====== HOME ====== */
+function viewHome(){
+ const q=S.busca.toLowerCase();
+ const ls=S.lotes.filter(l=>!q||[l.fazenda,l.lote,l.retiro,l.categoria].join(' ').toLowerCase().includes(q)).sort((a,b)=>(b.criadoEm||0)-(a.criadoEm||0));
+ const cards=ls.map(l=>{const c=calc(l,evsLote(l.id),'todos');
+  return `<a class="card lote" href="#/lote/${l.id}"><div class="row"><div class="grow"><h3>Lote ${esc(l.lote)} — ${esc(l.fazenda)}</h3><small>${esc([l.retiro,l.categoria,(l.qtd?l.qtd+' animais':'')].filter(Boolean).join(' • '))}</small></div><span class="chip n">Ciclo ${l.cicloAtual||1}</span></div>
+  <div class="row" style="margin-top:8px"><span class="chip n">Inseminadas ${c.insem}</span><span class="chip">Prenhez IA ${fmtPct(c.prenhezIA)}</span>${c.aptos?`<span class="chip a">${c.aptos} p/ ressinc.</span>`:''}${c.faltTot?`<span class="chip r">${c.faltTot} faltas</span>`:''}</div></a>`}).join('');
+ shell('Lotes de IATF',`<div class="row" style="margin-bottom:10px"><input type="search" id="bq" class="grow" placeholder="Buscar fazenda, lote, retiro…" value="${esc(S.busca)}"><a class="btn g" href="#/novo">+ Novo lote</a></div>${cards||'<div class="empty">Nenhum lote ainda. Toque em “Novo lote”.</div>'}`,'lotes');
+ $('#bq').oninput=e=>{S.busca=e.target.value;const pos=e.target.selectionStart;viewHome();const i=$('#bq');i.focus();i.setSelectionRange(pos,pos)};
+}
+
+/* ====== FORM DO LOTE (1. DADOS GERAIS) ====== */
+function viewLoteForm(l){
+ const v=l||{};const dl=(id,k)=>`<datalist id="${id}">${uniq(S.lotes.map(x=>x[k])).map(o=>`<option value="${esc(o)}">`).join('')}</datalist>`;
+ shell(l?'Editar lote':'Novo lote',`<form id="fx" class="card"><div class="sec">1. Dados gerais do lote</div><div class="grid">
+ <label class="fld"><span>Fazenda *</span><input type="text" name="fazenda" list="dlf" required value="${esc(v.fazenda)}"></label>
+ <label class="fld"><span>Retiro</span><input type="text" name="retiro" list="dlr" value="${esc(v.retiro)}"></label>
+ <label class="fld"><span>Médico veterinário responsável</span><input type="text" name="vet" list="dlv" value="${esc(v.vet)}"></label>
+ <label class="fld"><span>Lote *</span><input type="text" name="lote" required value="${esc(v.lote)}"></label>
+ <label class="fld"><span>Categoria</span><select name="categoria"><option value="">—</option>${CATS.map(c=>`<option ${c===v.categoria?'selected':''}>${c}</option>`).join('')}</select></label>
+ <label class="fld"><span>Quantidade de animais</span><input type="text" inputmode="numeric" name="qtd" value="${esc(v.qtd)}"></label>
+ <label class="fld"><span>Pasto de origem</span><input type="text" name="pastoOrigem" value="${esc(v.pastoOrigem)}"></label>
+ <label class="fld"><span>Pasto de destino</span><input type="text" name="pastoDestino" value="${esc(v.pastoDestino)}"></label>
+ <div class="fld"><span>Repasse com touro</span><div class="seg"><label><input type="radio" name="repasse" value="sim" ${v.repasse==='sim'?'checked':''}><b>Sim</b></label><label><input type="radio" name="repasse" value="nao" ${v.repasse!=='sim'?'checked':''}><b>Não</b></label></div></div>
+ <label class="fld full"><span>Observações do lote</span><textarea name="obs">${esc(v.obs)}</textarea></label></div>
+ ${dl('dlf','fazenda')}${dl('dlr','retiro')}${dl('dlv','vet')}
+ <div class="row" style="margin-top:12px"><button class="btn g">Salvar lote</button><a class="btn ghost" href="${l?'#/lote/'+l.id:'#/'}">Cancelar</a></div></form>`,'lotes');
+ $('#fx').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);
+  const o={...(l||{}),id:l?l.id:uid(),cicloAtual:l?l.cicloAtual||1:1,criadoEm:l?l.criadoEm:Date.now()};
+  ['fazenda','retiro','vet','lote','categoria','qtd','pastoOrigem','pastoDestino','repasse','obs'].forEach(k=>o[k]=String(f.get(k)||'').trim());
+  Store.saveLote(o);S.loteId=o.id;S.ciclo=o.cicloAtual;S.tab='d0';toast('Lote salvo');location.hash='#/lote/'+o.id};
+}
+
+/* ====== TELA DO LOTE ====== */
+function viewLote(){
+ const l=loteAtual();
+ shell(`Lote ${esc(l.lote)}`,`
+ <div class="card"><div class="row"><div class="grow"><b>${esc(l.fazenda)}</b><br><small style="color:var(--mut)">${esc([l.retiro&&'Retiro '+l.retiro,l.categoria,l.qtd&&l.qtd+' animais',l.vet&&'Vet. '+l.vet,l.pastoOrigem&&'Origem: '+l.pastoOrigem,l.pastoDestino&&'Destino: '+l.pastoDestino,'Repasse: '+(l.repasse==='sim'?'sim':'não')].filter(Boolean).join(' • '))}</small>${l.obs?`<br><small>${esc(l.obs)}</small>`:''}</div>
+ <button class="btn ghost sm" data-act="menu">⋮ Mais</button></div>
+ <div class="row" style="margin-top:10px"><select id="ciclo" style="width:auto"></select><span id="aptosChip"></span><span id="btnCiclo"></span>
+ <input type="search" id="hq" class="grow" placeholder="Histórico do animal (ID)" style="min-width:140px"></div></div>
+ <div class="tabs" id="tabs"></div><div id="etapaBox"></div>`,'lotes');
+ $('#ciclo').onchange=e=>{S.ciclo=e.target.value==='todos'?'todos':parseInt(e.target.value);S.editId=null;buildEtapa();refreshLote()};
+ $('#hq').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();histAnimal(e.target.value.trim().toUpperCase())}};
+ buildEtapa();refreshLote();
+}
+const cicloForm=l=>S.ciclo==='todos'?(l.cicloAtual||1):S.ciclo;
+function buildEtapa(){
+ const l=loteAtual(),box=$('#etapaBox');if(!l||!box)return;
+ if(S.tab==='ind'){box.innerHTML='<div id="kpiBox"></div>';return}
+ const et=ET(S.tab),ed=S.editId?S.eventos.find(e=>e.id===S.editId):null;
+ const keep=(S.keep[et.k]=S.keep[et.k]||{});
+ const val=n=>ed?ed[n]:keep[n];
+ const fld=c=>{const v=val(c.n)??'';
+  if(c.t==='sel')return `<label class="fld"><span>${c.l}</span><select name="${c.n}"><option value="">—</option>${c.o.map(o=>`<option ${o===v?'selected':''}>${esc(o)}</option>`).join('')}</select></label>`;
+  if(c.t==='seg')return `<div class="fld full"><span>${c.l}${c.req?' *':''}</span><div class="seg">${c.o.map(([k,t])=>`<label><input type="radio" name="${c.n}" value="${k}" ${k===v?'checked':''}><b>${t}</b></label>`).join('')}</div></div>`;
+  if(c.t==='area')return `<label class="fld full"><span>${c.l}</span><textarea name="${c.n}">${esc(v)}</textarea></label>`;
+  return `<label class="fld"><span>${c.l}</span><input type="text" ${c.t==='num'?'inputmode="decimal"':''} name="${c.n}" value="${esc(v)}"></label>`};
+ const dt=ed?ed.data:(keep.data||hoje());
+ box.innerHTML=`<form id="fe" class="card" autocomplete="off"><div class="sec">${et.nome}</div>
+ ${ed?`<div class="note warn" style="margin:0 0 10px">Editando ${esc(ed.animalId)} <button type="button" class="btn ghost sm" data-act="cancelEdit">cancelar</button></div>`:''}
+ <div class="grid">
+ <label class="fld"><span>Data *</span><input type="date" name="data" value="${dt}" required></label>
+ <label class="fld"><span>Hora início <a href="#" data-act="agora" data-t="horaIni">agora</a></span><input type="time" name="horaIni" value="${(ed?ed.horaIni:keep.horaIni)||''}"></label>
+ <label class="fld"><span>Hora fim <a href="#" data-act="agora" data-t="horaFim">agora</a></span><input type="time" name="horaFim" value="${(ed?ed.horaFim:keep.horaFim)||''}"></label>
+ <label class="fld"><span>ID do animal *</span><input type="text" name="animalId" id="aid" list="dlids" required autocapitalize="characters" value="${esc(ed?ed.animalId:'')}" style="font-weight:700;font-size:17px"></label>
+ ${et.campos.map(fld).join('')}</div><datalist id="dlids"></datalist>
+ ${et.nota?`<div class="note">${et.nota}</div>`:''}
+ <div class="row" style="margin-top:12px"><button class="btn g grow">${ed?'Salvar alteração':'Salvar e próximo'}</button></div></form>
+ <div id="pend"></div><div class="card"><div class="row"><h3 class="grow" id="lh">Registros</h3><input type="search" id="lq" placeholder="Filtrar ID" style="width:120px"></div><div id="lista"></div></div>`;
+ const f=$('#fe');f.onsubmit=salvarEv;
+ if(et.k==='dg30'){const sync=()=>{const r=f.querySelector('[name=resultado]:checked')?.value;const rs=[...f.querySelectorAll('[name=ressinc]')];
+   if(r==='prenhe'){rs.forEach(x=>{x.checked=x.value==='nao';x.disabled=true})}else{rs.forEach(x=>x.disabled=false);if(r==='vazia'&&!rs.some(x=>x.checked))rs.find(x=>x.value==='sim').checked=true}};
+  f.addEventListener('change',e=>{if(e.target.name==='resultado')sync()});sync()}
+ $('#lq').oninput=refreshLista;
+ if(!ed)setTimeout(()=>$('#aid')&&$('#aid').focus(),50);
+}
+function salvarEv(e){
+ e.preventDefault();const f=e.target,l=loteAtual(),et=ET(S.tab),c=cicloForm(l);
+ const g=n=>{const r=f.querySelectorAll(`[name="${n}"]`);if(!r.length)return'';if(r[0].type==='radio')return(f.querySelector(`[name="${n}"]:checked`)||{}).value||'';return r[0].value.trim()};
+ const animalId=g('animalId').toUpperCase();if(!animalId)return toast('Informe o ID do animal','e');
+ const o={loteId:l.id,etapa:et.k,ciclo:c,animalId,data:g('data'),horaIni:g('horaIni'),horaFim:g('horaFim')};
+ for(const cp of et.campos){let v=g(cp.n);
+  if(cp.req&&!v)return toast('Selecione: '+cp.l,'e');
+  if(cp.t==='num'){const n=num(v);if(v&&n==null)return toast(cp.l+' inválido','e');
+   if(cp.n==='ecc'&&n!=null&&(n<1||n>5))return toast('ECC deve ficar entre 1 e 5','e');
+   if(cp.n==='peso'&&n!=null&&(n<=0||n>1500))return toast('Peso inválido','e');v=n}
+  if(v!==''&&v!=null)o[cp.n]=v}
+ if(et.k==='dg30'){if(o.resultado==='prenhe')o.ressinc='nao';else if(!o.ressinc)o.ressinc='sim'}
+ o.id=[l.id,c,et.k,animalId].join('_').replace(/\//g,'-');
+ const exist=S.eventos.find(x=>x.id===o.id);
+ if(exist&&S.editId!==o.id&&!confirm(`${animalId} já tem registro em ${et.curto} (ciclo ${c}). Substituir?`))return;
+ if(S.editId&&S.editId!==o.id)Store.delEv(S.editId);
+ o.criadoEm=(exist&&exist.criadoEm)||Date.now();o.autor=S.user.email||'';
+ const ex=esperado(l,evsLote(l.id),et.k,c);
+ Store.saveEv(o);
+ const k=S.keep[et.k]=S.keep[et.k]||{};k.data=o.data;k.horaIni=o.horaIni;k.horaFim=o.horaFim;et.campos.forEach(cp=>{if(cp.keep)k[cp.n]=o[cp.n]||''});lsSet('gp_keep',S.keep);
+ if(ex.ids&&ex.ids.size&&!ex.ids.has(animalId))toast(`⚠ ${animalId} não consta na etapa anterior deste ciclo`,'w');else toast('✓ '+animalId+' salvo');
+ S.editId=null;buildEtapa();refreshLote();
+}
+function refreshLote(){
+ const l=loteAtual();if(!l||!$('#etapaBox'))return;
+ const evs=evsLote(l.id),cmax=Math.max(l.cicloAtual||1,...evs.map(e=>e.ciclo||1));
+ const sel=$('#ciclo');sel.innerHTML=range(1,cmax).map(c=>`<option value="${c}" ${S.ciclo===c?'selected':''}>Ciclo ${c}${c>1?' (ressinc.)':''}</option>`).join('')+`<option value="todos" ${S.ciclo==='todos'?'selected':''}>Todos os ciclos</option>`;
+ const cc=cicloForm(l),c=calc(l,evs,S.ciclo);
+ $('#aptosChip').innerHTML=c.aptos?`<span class="chip a">${c.aptos} aptos à ressinc.</span>`:'';
+ $('#btnCiclo').innerHTML=(S.ciclo===(l.cicloAtual||1)&&c.aptos)?'<button class="btn sm g" data-act="novoCiclo">Iniciar ressincronização</button>':'';
+ $('#tabs').innerHTML=ETAPAS.map(et=>{const n=new Set(evs.filter(e=>e.etapa===et.k&&(S.ciclo==='todos'||e.ciclo===S.ciclo)).map(e=>e.animalId)).size;
+  return `<button class="tab ${S.tab===et.k?'on':''} ${et.k==='iatf'||et.k==='dgfinal'?'gr':''}" data-act="tab" data-k="${et.k}">${et.curto}<i>${n}</i></button>`}).join('')+`<button class="tab ${S.tab==='ind'?'on':''}" data-act="tab" data-k="ind">📊 Indicadores</button>`;
+ if(S.tab==='ind')return $('#kpiBox').innerHTML=kpiHTML(c,l);
+ const et=ET(S.tab),ex=esperado(l,evs,et.k,cc),reg=new Set(evs.filter(e=>e.etapa===et.k&&e.ciclo===cc).map(e=>e.animalId));
+ const dl=$('#dlids');if(dl)dl.innerHTML=ex.ids?[...ex.ids].filter(i=>!reg.has(i)).map(i=>`<option value="${esc(i)}">`).join(''):'';
+ const pend=ex.ids?[...ex.ids].filter(i=>!reg.has(i)).sort((a,b)=>a.localeCompare(b,'pt-BR',{numeric:true})):[];
+ $('#pend').innerHTML=ex.ids&&ex.ids.size?`<div class="card"><details ${pend.length&&pend.length<=40?'open':''}><summary>Pendentes neste manejo (ciclo ${cc}): ${pend.length} de ${ex.ids.size}</summary><div>${pend.slice(0,200).map(i=>`<span class="pill" data-act="pick" data-id="${esc(i)}">${esc(i)}</span>`).join('')||'<small>Todos registrados ✓</small>'}</div></details></div>`
+  :(ex.n?`<div class="note" style="margin:0 0 12px">Esperado: ${ex.n} animais • registrados: ${reg.size}${ex.n>reg.size?' • faltam '+(ex.n-reg.size):''}</div>`:'');
+ refreshLista();
+}
+function refreshLista(){
+ const l=loteAtual(),lista=$('#lista');if(!l||!lista||S.tab==='ind')return;
+ const q=($('#lq')?$('#lq').value:'').trim().toUpperCase(),et=ET(S.tab);
+ const r=evsLote(l.id).filter(e=>e.etapa===et.k&&(S.ciclo==='todos'||e.ciclo===S.ciclo)&&(!q||e.animalId.includes(q))).sort((a,b)=>(b.criadoEm||0)-(a.criadoEm||0));
+ $('#lh').textContent='Registros ('+r.length+')';
+ lista.innerHTML=r.slice(0,150).map(e=>{const d=et.campos.filter(c=>c.n!=='obs'&&e[c.n]!=null&&e[c.n]!=='').map(c=>`${c.l.replace(/ \(.*\)/,'')}: ${VAL[e[c.n]]||e[c.n]}`).join(' · ');
+  return `<div class="reg"><div class="t" data-act="edit" data-id="${esc(e.id)}"><b>${esc(e.animalId)}</b> ${S.ciclo==='todos'?`<span class="chip n">C${e.ciclo}</span>`:''}<small>${fmtData(e.data)} ${esc(e.horaIni||'')} ${d?'• '+esc(d):''}${e.obs?' • '+esc(e.obs):''}</small></div>
+  <button class="btn ghost sm" data-act="hist" data-id="${esc(e.animalId)}">🕘</button><button class="btn ghost sm" data-act="del" data-id="${esc(e.id)}">🗑</button></div>`}).join('')||'<div class="empty">Nenhum registro.</div>';
+}
+
+/* ====== INDICADORES ====== */
+function kpiHTML(c,l){
+ const k=(v,t,p)=>`<div class="kpi ${p?'p':''}"><b>${v}</b><span>${t}</span></div>`;
+ const tb=(h,rows)=>`<div class="tw"><table><tr>${h.map((x,i)=>`<th class="${i?'n':''}">${x}</th>`).join('')}</tr>${rows.join('')||`<tr><td colspan="${h.length}" class="empty">Sem dados</td></tr>`}</table></div>`;
+ const gr=g=>`<tr><td>${esc(g.k)}</td><td class="n">${g.insem}</td><td class="n">${g.pIA}</td><td class="n">${g.pT}</td><td class="n">${g.vz}</td><td class="n">${fmtPct(pct(g.pIA,g.insem))}</td></tr>`;
+ return `<div class="card"><div class="sec">3. Indicadores do lote${S.ciclo==='todos'?' (todos os ciclos)':' – ciclo '+S.ciclo}</div><div class="kpis">
+ ${k(c.insem,'Qtd. inseminada')}${k(c.pIA,'Qtd. prenhe IA')}${k(c.pT,'Qtd. prenhe touro')}${k(c.vz,'Qtd. vazia')}${k(c.aptos,'Aptos à ressincronização')}${k(c.aval,'Total avaliado')}
+ ${k(fmtPct(c.prenhezIA),'Prenhez lote IA',1)}${k(fmtPct(c.prenhezFinal),'Prenhez final',1)}${k(c.faltTot,'Faltas por manejo')}</div>
+ <div class="note">Prenhez IA = prenhe IA ÷ inseminadas. Prenhez final = (prenhe IA + touro) ÷ animais com DG final (${c.nFin}). ${c.prov?c.prov+' animal(is) ainda só com DG 30 (provisório).':''}</div></div>
+ <div class="card"><h3>Faltas por manejo</h3>${tb(['Manejo','Esperado','Registrado','Faltas'],ETAPAS.filter(e=>c.faltas[e.k].esp>0||c.faltas[e.k].reg>0).map(e=>{const f=c.faltas[e.k];return `<tr><td>${e.curto}${f.ids&&f.ids.length&&f.ids.length<=25?`<br><small style="color:var(--mut)">${esc(f.ids.join(', '))}</small>`:''}</td><td class="n">${f.esp}</td><td class="n">${f.reg}</td><td class="n">${f.falt?`<span class="chip r">${f.falt}</span>`:'0'}</td></tr>`}))}</div>
+ <div class="card"><h3>Resultado por categoria</h3>${tb(['Categoria','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],c.porCat.map(gr))}</div>
+ <div class="card"><h3>Resultado por touro</h3>${tb(['Touro','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],c.porTouro.map(gr))}</div>
+ <div class="card"><h3>Animais</h3><div class="tw"><table><tr><th>ID</th><th>Categoria</th><th>Touro</th><th>DG 30</th><th>DG final</th><th>Situação</th></tr>${c.rows.map(r=>`<tr><td><a href="#" data-act="hist" data-id="${esc(r.id)}">${esc(r.id)}</a></td><td>${esc(r.categoria)}</td><td>${esc(r.touro)}</td><td>${r.g30?VAL[r.g30.resultado]:'—'}</td><td>${r.gf?VAL[r.gf.resultado]:'—'}</td><td>${STATUS[r.status]}${r.apto?' <span class="chip a">ressinc.</span>':''}</td></tr>`).join('')}</table></div></div>
+ <div class="row"><button class="btn g" data-act="pdf">📄 Relatório PDF</button><button class="btn ghost" data-act="csv">⬇ Planilha CSV</button></div>`;
+}
+function viewInd(){
+ const fz=S.fz||'';const ls=S.lotes.filter(l=>!fz||l.fazenda===fz);
+ const cs=ls.map(l=>({l,c:calc(l,evsLote(l.id),'todos')}));
+ const tot=cs.reduce((a,x)=>({i:a.i+x.c.insem,p:a.p+x.c.pIA,t:a.t+x.c.pT,v:a.v+x.c.vz,a:a.a+x.c.aptos,f:a.f+x.c.faltTot}),{i:0,p:0,t:0,v:0,a:0,f:0});
+ const tb=(h,rows)=>`<div class="tw"><table><tr>${h.map((x,i)=>`<th class="${i?'n':''}">${x}</th>`).join('')}</tr>${rows.join('')||`<tr><td colspan="${h.length}" class="empty">Sem dados</td></tr>`}</table></div>`;
+ const gr=g=>`<tr><td>${esc(g.k)}</td><td class="n">${g.insem}</td><td class="n">${g.pIA}</td><td class="n">${g.pT}</td><td class="n">${g.vz}</td><td class="n">${fmtPct(pct(g.pIA,g.insem))}</td></tr>`;
+ shell('Indicadores gerais',`<div class="card row"><select id="fz" class="grow"><option value="">Todas as fazendas</option>${uniq(S.lotes.map(l=>l.fazenda)).map(f=>`<option ${f===fz?'selected':''}>${esc(f)}</option>`).join('')}</select><button class="btn g" data-act="pdfGeral">📄 PDF</button></div>
+ <div class="card"><div class="kpis"><div class="kpi"><b>${ls.length}</b><span>Lotes</span></div><div class="kpi"><b>${tot.i}</b><span>Inseminadas</span></div><div class="kpi p"><b>${fmtPct(pct(tot.p,tot.i))}</b><span>Prenhez IA</span></div><div class="kpi"><b>${tot.a}</b><span>Aptos à ressinc.</span></div><div class="kpi"><b>${tot.f}</b><span>Faltas</span></div></div></div>
+ <div class="card"><h3>Resultado por lote</h3>${tb(['Lote','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],cs.map(x=>gr({k:x.l.fazenda+' – '+x.l.lote,insem:x.c.insem,pIA:x.c.pIA,pT:x.c.pT,vz:x.c.vz})))}</div>
+ <div class="card"><h3>Resultado por categoria</h3>${tb(['Categoria','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],mergeGrupos(cs.map(x=>x.c.porCat)).map(gr))}</div>
+ <div class="card"><h3>Resultado por touro</h3>${tb(['Touro','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],mergeGrupos(cs.map(x=>x.c.porTouro)).map(gr))}</div>`,'ind');
+ $('#fz').onchange=e=>{S.fz=e.target.value;viewInd()};
+}
+
+/* ====== HISTÓRICO DO ANIMAL ====== */
+function histAnimal(id){
+ const l=loteAtual();if(!id||!l)return;
+ const evs=evsLote(l.id).filter(e=>e.animalId===id).sort((a,b)=>(a.ciclo-b.ciclo)||(ETAPAS.findIndex(x=>x.k===a.etapa)-ETAPAS.findIndex(x=>x.k===b.etapa)));
+ modal(`<div class="row"><h3 class="grow" style="margin:0">Histórico • ${esc(id)}</h3><button class="btn ghost sm" data-act="closeModal">Fechar</button></div><small style="color:var(--mut)">Lote ${esc(l.lote)} — ${esc(l.fazenda)}</small>`+
+ (evs.length?evs.map(e=>{const et=ET(e.etapa);const d=et.campos.filter(c=>e[c.n]!=null&&e[c.n]!=='').map(c=>`${c.l.replace(/ \(.*\)/,'')}: ${VAL[e[c.n]]||e[c.n]}`).join(' · ');
+  return `<div class="reg"><div class="t"><b>${et.curto}</b> <span class="chip n">Ciclo ${e.ciclo}</span><small>${fmtData(e.data)} ${esc(e.horaIni||'')}${e.horaFim?'–'+esc(e.horaFim):''}</small><small style="white-space:normal">${esc(d)}</small></div></div>`}).join(''):'<div class="empty">Nenhum registro para esse ID neste lote.</div>'));
+}
+
+/* ====== EXPORTAÇÕES ====== */
+function csvLote(l){
+ const evs=evsLote(l.id),m=new Map();
+ evs.forEach(e=>{const k=e.animalId+'|'+e.ciclo;if(!m.has(k))m.set(k,{animalId:e.animalId,ciclo:e.ciclo,ev:{}});m.get(k).ev[e.etapa]=e});
+ const H=['Fazenda','Retiro','Lote','Ciclo','Animal','Categoria','Raça','Peso D0','ECC D0','Implante','Data D0','Data D8/D9','Queda implante','Data IA','Touro','Partida','Escore cio','DG30','Ressinc.','Data DG30','DG final','Data DG final','Nº anca','Peso DG final','ECC DG final'];
+ const rows=[...m.values()].sort((a,b)=>a.animalId.localeCompare(b.animalId,'pt-BR',{numeric:true})||a.ciclo-b.ciclo).map(a=>{const e=a.ev,d0=e.d0||{},d8=e.d8||{},ia=e.iatf||{},g=e.dg30||{},f=e.dgfinal||{};
+  return [l.fazenda,l.retiro,l.lote,a.ciclo,a.animalId,d0.categoria||(e.puberdade||{}).categoria||l.categoria,d0.raca,d0.peso,d0.ecc,d0.implante,fmtData(d0.data),fmtData(d8.data),VAL[d8.quedaImplante],fmtData(ia.data),ia.touro,ia.partida,ia.escoreCio,VAL[g.resultado],VAL[g.ressinc],fmtData(g.data),VAL[f.resultado],fmtData(f.data),f.anca,f.peso,f.ecc]});
+ const q=v=>{v=v==null?'':String(v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+ return '﻿'+[H,...rows].map(r=>r.map(q).join(';')).join('\r\n');
+}
+function baixar(nome,conteudo,tipo){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([conteudo],{type:tipo}));a.download=nome;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+const slug=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_|_$/g,'');
+function pdfBase(titulo,sub){
+ const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});
+ doc.setFillColor(20,48,122);doc.rect(0,0,210,24,'F');
+ try{doc.addImage(LOGO,'PNG',6,3,25,17.6)}catch(e){}
+ doc.setTextColor(255);doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text('Coleta de dados de IATF',36,11);
+ doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.text('GestPec - Consultoria e Gestao Pecuaria',36,17);
+ doc.setTextColor(20,48,122);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(titulo,10,32);
+ doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(90);const sl=doc.splitTextToSize(sub,190);doc.text(sl,10,37);
+ return{doc,y:37+sl.length*4+3};
+}
+const AT={theme:'grid',styles:{fontSize:8.5,cellPadding:1.8},headStyles:{fillColor:[20,48,122]},alternateRowStyles:{fillColor:[245,248,252]},margin:{left:10,right:10,bottom:16}};
+function secPdf(doc,y,t,head,body,extra={}){
+ if(y>255){doc.addPage();y=16}
+ doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(63,127,18);doc.text(t,10,y);
+ doc.autoTable({...AT,...extra,startY:y+2,head:[head],body:body.length?body:[['Sem dados',...Array(head.length-1).fill('')]]});
+ return doc.lastAutoTable.finalY+7}
+function rodape(doc){
+ const n=doc.getNumberOfPages();
+ for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(90);
+  doc.text('AIMEX SOFTWARE AGRO',105,290,{align:'center'});doc.setFont('helvetica','normal');doc.text(`Pagina ${i} de ${n}`,200,290,{align:'right'})}}
+const rowG=g=>[g.k,g.insem,g.pIA,g.pT,g.vz,fmtPct(pct(g.pIA,g.insem))];
+function pdfLote(){
+ const l=loteAtual(),c=calc(l,evsLote(l.id),'todos');
+ const {doc,y:y0}=pdfBase(`Relatorio do lote ${l.lote} - ${l.fazenda}`,[l.retiro&&'Retiro: '+l.retiro,l.categoria&&'Categoria: '+l.categoria,l.qtd&&'Animais: '+l.qtd,l.vet&&'Vet.: '+l.vet,l.pastoOrigem&&'Origem: '+l.pastoOrigem,l.pastoDestino&&'Destino: '+l.pastoDestino,'Repasse: '+(l.repasse==='sim'?'sim':'nao'),'Ciclos: '+Math.max(l.cicloAtual||1,1)].filter(Boolean).join('  |  '));
+ let y=secPdf(doc,y0,'Indicadores',['Indicador','Valor'],[['Qtd. inseminada',c.insem],['Qtd. prenhe IA',c.pIA],['Qtd. prenhe touro',c.pT],['Qtd. vazia',c.vz],['Animais aptos a ressincronizacao',c.aptos],['Total avaliado',c.aval],['Prenhez lote IA (%)',fmtPct(c.prenhezIA)],['Prenhez final (%)',fmtPct(c.prenhezFinal)],['Faltas por manejo (total)',c.faltTot]],{columnStyles:{1:{halign:'right'}}});
+ y=secPdf(doc,y,'Faltas por manejo',['Manejo','Esperado','Registrado','Faltas'],ETAPAS.filter(e=>c.faltas[e.k].esp>0||c.faltas[e.k].reg>0).map(e=>[e.curto,c.faltas[e.k].esp,c.faltas[e.k].reg,c.faltas[e.k].falt]));
+ y=secPdf(doc,y,'Resultado por categoria',['Categoria','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],c.porCat.map(rowG));
+ y=secPdf(doc,y,'Resultado por touro',['Touro','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],c.porTouro.map(rowG));
+ doc.addPage();y=16;
+ secPdf(doc,y,'Historico individual por animal (todos os ciclos)',['ID','Categoria','Touro','Data IA','DG 30','DG final','Situacao'],c.rows.map(r=>[r.id,r.categoria,r.touro,r.ia?fmtData(r.ia.data):'-',r.g30?VAL[r.g30.resultado]:'-',r.gf?VAL[r.gf.resultado]:'-',STATUS[r.status]+(r.apto?' (ressinc.)':'')]));
+ rodape(doc);doc.save(`GestPec_IATF_${slug(l.fazenda)}_Lote_${slug(l.lote)}.pdf`);
+}
+function pdfGeral(){
+ const fz=S.fz||'',ls=S.lotes.filter(l=>!fz||l.fazenda===fz),cs=ls.map(l=>({l,c:calc(l,evsLote(l.id),'todos')}));
+ const tot=cs.reduce((a,x)=>({i:a.i+x.c.insem,p:a.p+x.c.pIA,t:a.t+x.c.pT,v:a.v+x.c.vz}),{i:0,p:0,t:0,v:0});
+ const {doc,y:y0}=pdfBase('Relatorio geral de IATF',(fz||'Todas as fazendas')+`  |  ${ls.length} lote(s)  |  Inseminadas: ${tot.i}  |  Prenhez IA: ${fmtPct(pct(tot.p,tot.i))}`);
+ let y=secPdf(doc,y0,'Resultado por lote',['Lote','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],cs.map(x=>rowG({k:x.l.fazenda+' - '+x.l.lote,insem:x.c.insem,pIA:x.c.pIA,pT:x.c.pT,vz:x.c.vz})));
+ y=secPdf(doc,y,'Resultado por categoria',['Categoria','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],mergeGrupos(cs.map(x=>x.c.porCat)).map(rowG));
+ secPdf(doc,y,'Resultado por touro',['Touro','Insem.','Prenhe IA','Prenhe touro','Vazia','% IA'],mergeGrupos(cs.map(x=>x.c.porTouro)).map(rowG));
+ rodape(doc);doc.save('GestPec_IATF_Geral.pdf');
+}
+
+/* ====== AÇÕES (delegação de eventos) ====== */
+const ACT={
+ tab(t){S.tab=t.dataset.k;S.editId=null;buildEtapa();refreshLote()},
+ edit(t){S.editId=t.dataset.id;buildEtapa();refreshLote();window.scrollTo({top:0,behavior:'smooth'})},
+ cancelEdit(){S.editId=null;buildEtapa();refreshLote()},
+ del(t){const e=S.eventos.find(x=>x.id===t.dataset.id);if(e&&confirm('Excluir registro de '+e.animalId+'?'))Store.delEv(e.id)},
+ hist(t){histAnimal(t.dataset.id)},
+ pick(t){const i=$('#aid');if(i){i.value=t.dataset.id;i.focus();window.scrollTo({top:0,behavior:'smooth'})}},
+ agora(t){const i=$(`[name="${t.dataset.t}"]`);if(i)i.value=agora()},
+ closeModal,
+ novoCiclo(){const l=loteAtual(),c=calc(l,evsLote(l.id),S.ciclo);
+  if(!confirm(`Iniciar ciclo ${(l.cicloAtual||1)+1} com ${c.aptos} animais aptos à ressincronização?`))return;
+  l.cicloAtual=(l.cicloAtual||1)+1;Store.saveLote(l);S.ciclo=l.cicloAtual;S.tab='d0';S.editId=null;buildEtapa();refreshLote();toast('Ciclo '+l.cicloAtual+' iniciado')},
+ menu(){const l=loteAtual();modal(`<div class="row" style="flex-direction:column;align-items:stretch"><a class="btn ghost" href="#/lote/${l.id}/editar" data-act="closeModal">✏️ Editar dados do lote</a><button class="btn ghost" data-act="pdf">📄 Relatório PDF</button><button class="btn ghost" data-act="csv">⬇ Planilha CSV</button><button class="btn red" data-act="delLote">🗑 Excluir lote e registros</button><button class="btn ghost" data-act="closeModal">Fechar</button></div>`)},
+ pdf(){closeModal();try{pdfLote()}catch(e){toast('Erro ao gerar PDF (precisa de internet na 1ª vez): '+e.message,'e')}},
+ pdfGeral(){try{pdfGeral()}catch(e){toast('Erro ao gerar PDF: '+e.message,'e')}},
+ csv(){closeModal();const l=loteAtual();baixar(`GestPec_IATF_${slug(l.fazenda)}_Lote_${slug(l.lote)}.csv`,csvLote(l),'text/csv;charset=utf-8')},
+ delLote(){const l=loteAtual();closeModal();if(confirm(`Excluir o lote ${l.lote} e TODOS os registros dele? Não dá para desfazer.`)){Store.delLote(l.id);S.loteId=null;location.hash='#/';toast('Lote excluído')}},
+ backup(){baixar('gestpec_backup.json',JSON.stringify({lotes:S.lotes,eventos:S.eventos},null,1),'application/json')},
+ logout(){auth.signOut()},
+ async signup(){const e=$('#le').value.trim(),p=$('#lp').value;if(!e||p.length<6)return toast('Informe e-mail e senha (mín. 6)','e');try{await auth.createUserWithEmailAndPassword(e,p)}catch(er){toast(msgAuth(er),'e')}},
+ async reset(){const e=$('#le').value.trim();if(!e)return toast('Digite o e-mail primeiro','e');try{await auth.sendPasswordResetEmail(e);toast('E-mail de redefinição enviado')}catch(er){toast(msgAuth(er),'e')}}
+};
+document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(!t)return;const a=ACT[t.dataset.act];if(!a)return;if(t.tagName==='A'&&t.getAttribute('href')==='#')e.preventDefault();a(t)});
+
+/* ====== PWA ====== */
+(function pwa(){
+ try{
+  const cv=document.createElement('canvas');cv.width=cv.height=512;const x=cv.getContext('2d'),im=new Image();
+  im.onload=()=>{x.fillStyle='#fff';x.fillRect(0,0,512,512);const w=400,h=w*im.height/im.width;x.drawImage(im,56,(512-h)/2,w,h);
+   const ic=cv.toDataURL('image/png');
+   const man={name:'GestPec – IATF',short_name:'GestPec',start_url:'./',display:'standalone',background_color:'#ffffff',theme_color:'#14307a',icons:[{src:ic,sizes:'512x512',type:'image/png',purpose:'any'}]};
+   const lk=document.createElement('link');lk.rel='manifest';lk.href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/json'}));document.head.appendChild(lk);
+   const ap=document.createElement('link');ap.rel='apple-touch-icon';ap.href=ic;document.head.appendChild(ap)};
+  im.src=LOGO;
+  if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+ }catch(e){}
+})();
+
+Store.init();
+</script>
+</body>
+</html>
